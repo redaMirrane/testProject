@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: bagisto-app
+    volumes:
+      - .:/var/www/html
+    networks:
+      - bagisto-network
+    expose:
+      - "9000"  # Expose le port interne pour PHP-FPM
+    environment:
+      - DB_CONNECTION=mysql
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_DATABASE=bagisto
+      - DB_USERNAME=root
+      - DB_PASSWORD=rootpassword
+
+  nginx:
+    image: nginx:latest
+    container_name: bagisto-nginx
+    ports:
+      - "8000:80"  # Expose Nginx sur le port 8000
+    volumes:
+      - .:/var/www/html  # Le code source est monté dans le conteneur Nginx
+      - ./dockerr/nginx/nginx.conf:/etc/nginx/nginx.conf  # Configuration Nginx
+    networks:
+      - bagisto-network
+    depends_on:
+      - app
+      - db  # Attendre que la base de données soit prête avant de démarrer Nginx
+
+  db:
+    image: mysql:8.0
+    container_name: bagisto-db
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword  # Définit le mot de passe pour l'utilisateur root
+      MYSQL_DATABASE: bagisto  # Base de données à créer
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - bagisto-network
+
+networks:
+  bagisto-network:
+    external: true  # Cela indique que vous utilisez un réseau existant
+
+
+volumes:
+  db_data:
+    driver: local
